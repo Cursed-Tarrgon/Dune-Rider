@@ -45,7 +45,7 @@ public class GameManager : MonoBehaviour
 
             DeathSource.Play();
 
-            if (timer >= 5f)
+            if (timer >= 2f)
             {
                 SceneManager.LoadScene("Lose");
             }

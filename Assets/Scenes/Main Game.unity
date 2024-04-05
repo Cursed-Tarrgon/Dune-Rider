@@ -6357,7 +6357,7 @@ CharacterController:
   serializedVersion: 3
   m_Height: 2
   m_Radius: 0.5
-  m_SlopeLimit: 45
+  m_SlopeLimit: 60
   m_StepOffset: 0.3
   m_SkinWidth: 0.08
   m_MinMoveDistance: 0.001
@@ -6443,7 +6443,9 @@ MonoBehaviour:
   timeBeforeStaminaRegenStarts: 5
   staminaValueIncrement: 2
   staminaTimeIncrement: 0.1
+  currentStamina: 0
   displayStamina: 0
+  canUseStamina: 0
   maxHeat: 100
   HeatUseMultiplier: 5
   timeBeforeHeatRegenStarts: 5
@@ -6459,7 +6461,8 @@ MonoBehaviour:
   - {fileID: 8300000, guid: 24d375d18ed38a844b0fdbfaebe7841e, type: 3}
   currentHeat: 0
   displayHeat: 0
-  countDown: 0
+  heatTimer: 5
+  countDown: 5
   baseStepSpeed: 0.5
   sprintStepMultiplier: 0.6
   DefaultClips:

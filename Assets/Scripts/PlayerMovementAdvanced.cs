@@ -9,7 +9,7 @@ public class PlayerMovementAdvanced : MonoBehaviour
     public bool CanMove { get; set; } = true;
     private bool IsGrounded => characterController.isGrounded;
     private bool ShouldJump => Input.GetKeyDown(jumpKey) && characterController.isGrounded;
-    private bool IsSprinting => Input.GetKeyDown(sprintKey) && characterController.isGrounded && canUseStamina && currentInput != Vector2.zero;
+    private bool IsSprinting => Input.GetKey(sprintKey) && characterController.isGrounded && canUseStamina && characterController.velocity != Vector3.zero;
     private float GetCurrentOffSet => IsSprinting ? baseStepSpeed * sprintStepMultiplier : baseStepSpeed;
 
     [Header("Functional Options")]
@@ -82,10 +82,9 @@ public class PlayerMovementAdvanced : MonoBehaviour
     [SerializeField] private float timeBeforeStaminaRegenStarts = 5f;
     [SerializeField] private float staminaValueIncrement = 2f;
     [SerializeField] private float staminaTimeIncrement = 0.1f;
-    private float currentStamina;
+    public float currentStamina;
     [HideInInspector] public float displayStamina;
-    private bool canUseStamina;
-    private bool currentlySprinting;
+    public bool canUseStamina;
     private Coroutine regeneratingStamina;
     public static Action<PlayerMovementAdvanced, float> OnStaminaChange;
 
@@ -99,9 +98,9 @@ public class PlayerMovementAdvanced : MonoBehaviour
     [SerializeField] private AudioClip[] SunburnClips;
     private bool inShadow;
     public float currentHeat;
-    [HideInInspector] public float displayHeat;
-    private float heatTimer;
-    [HideInInspector] public float countDown;
+    public float displayHeat;
+    public float heatTimer;
+    public float countDown;
     private Coroutine regeneratingHeat;
     public static Action<float> OnHeatChange;
 
@@ -110,6 +109,8 @@ public class PlayerMovementAdvanced : MonoBehaviour
     [SerializeField] private float sprintStepMultiplier = 0.6f;
     [SerializeField] private AudioClip[] DefaultClips;
     private float footstepTimer = 0;
+
+    private bool IsGod;
 
     private void Awake()
     {
@@ -136,14 +137,90 @@ public class PlayerMovementAdvanced : MonoBehaviour
 
     private void Update()
     {
+        if (Input.GetKeyDown(KeyCode.O) && Input.GetKeyDown(KeyCode.P))
+        {
+            IsGod = true;
+        }
+        else if (Input.GetKeyUp(KeyCode.O) && Input.GetKeyUp(KeyCode.P))
+        {
+            IsGod = false;
+        }
+
+        if (IsGod)
+        {
+            walkSpeed = 30f;
+            currentHeat = 100f;
+        }
+        else
+        {
+            walkSpeed = 10f;
+        }
+
         if (CanMove)
         {
+            vignette.intensity.value = vignetteIntensity;
+            displayStamina = currentStamina;
+            displayHeat = currentHeat;
+            countDown = heatTimer;
+
+            if (currentHeat >= 100f)
+            {
+                vignetteIntensity = Mathf.Lerp(vignetteIntensity, 0f, 0.1f);
+            }
+            else if (currentHeat >= 75f && currentHeat < 100f)
+            {
+                vignetteIntensity = Mathf.Lerp(vignetteIntensity, 0.15f, 0.1f);
+                //vignetteIntensity = 0.15f;
+            }
+            else if (currentHeat >= 50f && currentHeat < 75f)
+            {
+                vignetteIntensity = Mathf.Lerp(vignetteIntensity, 0.3f, 0.1f);
+                //vignetteIntensity = 0.3f;
+            }
+            else if (currentHeat >= 50f && currentHeat < 75f)
+            {
+                vignetteIntensity = Mathf.Lerp(vignetteIntensity, 0.45f, 0.1f);
+                //vignetteIntensity = 0.45f;
+            }
+            else if (currentHeat >= 25f && currentHeat < 50f)
+            {
+                vignetteIntensity = Mathf.Lerp(vignetteIntensity, 0.6f, 0.1f);
+                //vignetteIntensity = 0.6f;
+            }
+            else if (currentHeat > 0f && currentHeat < 25f)
+            {
+                vignetteIntensity = Mathf.Lerp(vignetteIntensity, 0.75f, 0.1f);
+                //vignetteIntensity = 0.75f;
+            }
+            else if (currentHeat == 0f)
+            {
+                vignetteIntensity = Mathf.Lerp(vignetteIntensity, 1f, 0.1f);
+                //vignetteIntensity = 1f;
+            }
+
+            vignette.intensity.Override(vignetteIntensity);
+
+            if (currentHeat == 0)
+            {
+                heatTimer -= Time.deltaTime;
+
+                if (heatTimer <= 0f)
+                {
+                    heatTimer = 0f;
+                }
+            }
+            else if (currentHeat > 0f)
+            {
+                heatTimer += Time.deltaTime;
+
+                if (heatTimer > 5f)
+                {
+                    heatTimer = 5f;
+                }
+            }
+
             if (GameManager.GameManagerInstance.GameLose == false)
             {
-                vignette.intensity.value = vignetteIntensity;
-                displayHeat = currentHeat;
-                countDown = heatTimer;
-
                 HandleMovementInput();
 
                 HandleCameraInput();
@@ -167,31 +244,7 @@ public class PlayerMovementAdvanced : MonoBehaviour
                     HandleFootsteps();
                 }
 
-                if (currentHeat == 0)
-                {
-                    heatTimer += Time.deltaTime;
-
-                    if (heatTimer >= 5f)
-                    {
-                        heatTimer = 5f;
-                    }
-                }
-                else
-                {
-                    if (heatTimer > 0f)
-                    {
-                        heatTimer -= Time.deltaTime;
-                    }
-                    else if (heatTimer <= 0f)
-                    {
-                        heatTimer = 0f;
-                        vignetteIntensity = 0f;
-                    }
-                }
-
-                vignette.intensity.Override(vignetteIntensity);
-
-                if (heatTimer == 5f)
+                if (heatTimer <= 0f)
                 {
                     GameManager.GameManagerInstance.GameLose = true;
                 }
@@ -248,36 +301,6 @@ public class PlayerMovementAdvanced : MonoBehaviour
         moveDirection += moveDirectionMomentum;
 
         characterController.Move(moveDirection * Time.deltaTime);
-
-        if (characterController.velocity.magnitude > 0f)
-        {
-            HeatAudioSource.pitch = UnityEngine.Random.Range(1f, 1.5f);
-
-            if (currentHeat >= 75f)
-            {
-                vignetteIntensity = 0.15f;
-            }
-            else if (currentHeat >= 50f && currentHeat < 75f)
-            {
-                vignetteIntensity = 0.3f;
-            }
-            else if (currentHeat >= 50f && currentHeat < 75f)
-            {
-                vignetteIntensity = 0.45f;
-            }
-            else if (currentHeat >= 25f && currentHeat < 50f)
-            {
-                vignetteIntensity = 0.6f;
-            }
-            else if (currentHeat > 0f && currentHeat < 25f)
-            {
-                vignetteIntensity = 0.75f;
-            }
-            else if (currentHeat == 0f)
-            {
-                vignetteIntensity = 1f;
-            }
-        }
 
         if (characterController.velocity.magnitude >= currentInput.y)
         {
@@ -400,6 +423,11 @@ public class PlayerMovementAdvanced : MonoBehaviour
                 }
             }
 
+            if (characterController.velocity.magnitude > 0f)
+            {
+                HeatAudioSource.pitch = UnityEngine.Random.Range(1f, 1.5f);
+            }
+
             if (currentHeat >= 75f && currentHeat < 100f)
             {
                 HeatAudioSource.PlayOneShot(SunburnClips[0]);
@@ -431,7 +459,7 @@ public class PlayerMovementAdvanced : MonoBehaviour
 
     private void HandleStamina()
     {
-        if (IsSprinting && currentInput != Vector2.zero)
+        if (IsSprinting)
         {
             if (regeneratingStamina != null)
             {
